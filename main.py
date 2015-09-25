@@ -21,7 +21,7 @@ from sklearn.cross_validation import train_test_split
 import model;
 import xgboost as xgb;
 import numpy  as np;
-
+from sklearn import metrics;
 
 def create_features(filepath):
     """
@@ -73,15 +73,28 @@ feature_names = train.drop(['sponsored'], 1).columns;
 #Create validation set
 train_X, validation_X, train_Y, validation_Y = train_test_split(train_X, train_Y, test_size=0.20, random_state=0);
 
-#Train
-best_model = model.train(train_X, train_Y, validation_X, validation_Y, feature_names);
 
-#predict
-test_ids = test.file.values; 
+
+
+"""
+#Train
+best_model1 = model.train(train_X, train_Y, validation_X, validation_Y, feature_names);
 test_X   = xgb.DMatrix(np.asarray(test.drop(['file','sponsored'], 1).as_matrix()));
 
+"""
+
+
+best_model2 = RandomForestClassifier(n_estimators=1000, n_jobs=-1, random_state=0)
+best_model2.fit(train_X, train_Y);
+test_X = np.asarray(test.drop(['file','sponsored'], 1).as_matrix());
+#Measure AUC
+fpr, tpr, thresholds = metrics.roc_curve(validation_Y, best_model2.predict_proba(validation_X)[:,1], pos_label=1)
+print("AUC Validation : " + str(metrics.auc(fpr, tpr)));
+
+#predict
 submission = test[['file']].reset_index(drop=True)
-submission['sponsored'] = best_model.predict(test_X);
+#submission['sponsored'] = best_model1.predict(test_X);
+submission['sponsored'] = best_model2.predict_proba(test_X)[:, 1];
 submission.to_csv('submission.csv', index=False)
 
 
